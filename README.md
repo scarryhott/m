@@ -1,39 +1,36 @@
-# M — Transparent Closure Architecture
+# m
 
-M is a verifiable integration layer for payments, platform actions, and internal contracts.
+Paid, stateless network relay.
 
-Every accepted event preserves:
+## Flow
 
-1. source identity and raw payload digest;
-2. signature-verification result;
-3. declared adapter ID, version, and rules digest;
-4. normalized observed facts;
-5. separately declared inferred relations;
-6. contract evidence or state transition;
-7. previous and resulting closure digests.
+1. `POST /api/checkout` creates a Stripe subscription checkout.
+2. Stripe returns to `GET /api/access?session_id=...` and issues a signed access token.
+3. `POST /api/network` verifies the token and live subscription, then relays an opaque JSON event to an allowlisted HTTPS origin.
+4. The destination receives `X-M-Id` and `X-M-Signature` and the caller receives the same signed receipt.
 
-## Vercel environment variables
+No account database, content store, dashboard, analytics layer, or application-specific schema is included.
 
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
-- `STRIPE_WEBHOOK_SECRET`
-- `TAGTOKN_CONNECTOR_SECRET`
+## Vercel environment
 
-The system fails closed: signed events are rejected if append-only storage is unavailable.
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PRICE_ID`
+- `ACCESS_TOKEN_SECRET`
+- `NETWORK_ALLOWLIST` — comma-separated HTTPS origins
+- `NETWORK_SIGNING_SECRET` — optional; falls back to `ACCESS_TOKEN_SECRET`
+- `PUBLIC_ORIGIN` — optional canonical deployment origin
 
-## Endpoints
+## Request
 
-- `GET /api/health`
-- `POST /api/webhooks/stripe`
-- `POST /api/closure/observe`
-- `POST /api/contracts/transition`
-- `GET /api/closure/ledger`
-- `POST /api/closure/verify`
+```bash
+curl -X POST https://YOUR_DOMAIN/api/network \
+  -H "Authorization: Bearer ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"destination":"https://allowed.example/hook","event":{"type":"example","value":1}}'
+```
 
-## Local verification
+## Test
 
 ```bash
 npm test
 ```
-
-No external runtime dependencies are required.
