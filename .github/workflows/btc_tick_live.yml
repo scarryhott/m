@@ -7,6 +7,13 @@ on:
     paths:
       - research/btc_tick_live.py
       - .github/workflows/btc_tick_live.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - research/btc_tick_live.py
+      - api/live_ticks.py
+      - .github/workflows/btc_tick_live.yml
   workflow_dispatch:
 
 permissions:
