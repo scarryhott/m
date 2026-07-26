@@ -1,0 +1,53 @@
+name: BTC protected core overlay backtest
+
+on:
+  push:
+    branches:
+      - btc-tick-live-20260726
+    paths:
+      - research/btc_protected_core_backtest.py
+      - research/btc_protected_core_backtest_corrected.py
+      - .github/workflows/btc_protected_core_backtest.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - research/btc_protected_core_backtest.py
+      - research/btc_protected_core_backtest_corrected.py
+      - .github/workflows/btc_protected_core_backtest.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install runtime
+        run: python -m pip install --disable-pip-version-check numpy==2.3.2
+      - name: Verify corrected runner
+        run: python -m py_compile research/btc_protected_core_backtest.py research/btc_protected_core_backtest_corrected.py
+      - name: Run corrected five-year protected-core backtest
+        run: |
+          mkdir -p results/protected_core_backtest
+          python research/btc_protected_core_backtest_corrected.py | tee results/protected_core_backtest/console-summary.json
+      - name: Package results
+        run: |
+          cp research/btc_protected_core_backtest.py research/btc_protected_core_backtest_corrected.py results/protected_core_backtest/
+          cd results
+          zip -r btc-protected-core-backtest.zip protected_core_backtest
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-protected-core-backtest-corrected
+          path: |
+            results/protected_core_backtest
+            results/btc-protected-core-backtest.zip
+          if-no-files-found: error
+          retention-days: 14

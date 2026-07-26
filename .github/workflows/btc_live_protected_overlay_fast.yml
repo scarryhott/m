@@ -1,0 +1,65 @@
+name: BTC protected core bounded live test
+
+on:
+  push:
+    branches:
+      - btc-tick-live-20260726
+    paths:
+      - research/btc_live_protected_overlay.py
+      - research/btc_live_protected_overlay_fast.py
+      - .github/workflows/btc_live_protected_overlay_fast.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - research/btc_live_protected_overlay.py
+      - research/btc_live_protected_overlay_fast.py
+      - .github/workflows/btc_live_protected_overlay_fast.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-live-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify protected-core invariant
+        env:
+          SELF_TEST: "1"
+        run: python research/btc_live_protected_overlay_fast.py > bounded-self-test.json
+
+      - name: Capture three minutes of forward-only live BTC data
+        env:
+          CAPTURE_SECONDS: "180"
+          POLL_SECONDS: "2"
+          OUTPUT_DIR: results/live_core_overlay_fast
+        run: python research/btc_live_protected_overlay_fast.py | tee bounded-console.json
+
+      - name: Package exact live data and source
+        run: |
+          cp research/btc_live_protected_overlay.py results/live_core_overlay_fast/
+          cp research/btc_live_protected_overlay_fast.py results/live_core_overlay_fast/
+          cp bounded-self-test.json results/live_core_overlay_fast/
+          cp bounded-console.json results/live_core_overlay_fast/
+          cd results
+          zip -r btc-live-protected-overlay-fast.zip live_core_overlay_fast
+
+      - name: Upload bounded live test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-live-protected-overlay-fast
+          path: |
+            results/live_core_overlay_fast
+            results/btc-live-protected-overlay-fast.zip
+          if-no-files-found: error
+          retention-days: 7

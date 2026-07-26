@@ -1,0 +1,62 @@
+name: BTC protected core live data test
+
+on:
+  push:
+    branches:
+      - btc-tick-live-20260726
+    paths:
+      - research/btc_live_protected_overlay.py
+      - .github/workflows/btc_live_protected_overlay.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - research/btc_live_protected_overlay.py
+      - .github/workflows/btc_live_protected_overlay.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-paper-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify protected-core invariant
+        env:
+          SELF_TEST: "1"
+        run: python research/btc_live_protected_overlay.py > protected-core-self-test.json
+
+      - name: Capture five minutes of live BTC trades and order book
+        env:
+          CAPTURE_SECONDS: "300"
+          POLL_SECONDS: "1"
+          OUTPUT_DIR: results/live_core_overlay
+        run: python research/btc_live_protected_overlay.py | tee results-console.json
+
+      - name: Preserve source and verification
+        run: |
+          cp research/btc_live_protected_overlay.py results/live_core_overlay/
+          cp protected-core-self-test.json results/live_core_overlay/
+          cp results-console.json results/live_core_overlay/
+          cd results
+          zip -r btc-live-protected-overlay.zip live_core_overlay
+
+      - name: Upload live test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-live-protected-overlay
+          path: |
+            results/live_core_overlay
+            results/btc-live-protected-overlay.zip
+          if-no-files-found: error
+          retention-days: 7
