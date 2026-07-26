@@ -1,4 +1,4 @@
-name: BTC live tick paper run
+name: BTC recursive closure live run
 
 on:
   push:
@@ -6,12 +6,14 @@ on:
       - btc-tick-live-20260726
     paths:
       - research/btc_tick_live.py
+      - research/btc_recursive_closure.py
       - .github/workflows/btc_tick_live.yml
   pull_request:
     branches:
       - main
     paths:
       - research/btc_tick_live.py
+      - research/btc_recursive_closure.py
       - api/live_ticks.py
       - .github/workflows/btc_tick_live.yml
   workflow_dispatch:
@@ -22,7 +24,7 @@ permissions:
 jobs:
   capture-and-backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -32,16 +34,33 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Capture public BTC ticks and run paper strategy
+      - name: Verify recursive closure cycle
         env:
-          CAPTURE_SECONDS: "90"
+          SELF_TEST: "1"
+        run: python research/btc_recursive_closure.py > recursive-self-test.json
+
+      - name: Capture five minutes of public BTC ticks
+        env:
+          CAPTURE_SECONDS: "300"
           OUTPUT_DIR: results/live_tick
         run: python research/btc_tick_live.py
 
-      - name: Upload raw ticks and result
+      - name: Continue from the preserved closure basis
+        env:
+          TICKS_PATH: results/live_tick/live_ticks.csv
+          OUTPUT_PATH: results/live_tick/recursive_closure.json
+          SEED_BASIS_EQUITY: "1002.6169538508206"
+          SEED_BASIS_PRICE: "64696.3"
+          SEED_BASIS_TS_MS: "1785077264783"
+        run: python research/btc_recursive_closure.py
+
+      - name: Preserve verification output
+        run: cp recursive-self-test.json results/live_tick/recursive-self-test.json
+
+      - name: Upload raw ticks and recursive result
         uses: actions/upload-artifact@v4
         with:
-          name: btc-live-tick-run
+          name: btc-recursive-closure-run
           path: results/live_tick
           if-no-files-found: error
           retention-days: 7
