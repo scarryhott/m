@@ -7,6 +7,7 @@ on:
     paths:
       - research/btc_recursive_backtest.py
       - research/btc_recursive_backtest_fast.py
+      - research/btc_recursive_backtest_corrected.py
       - .github/workflows/btc_recursive_backtest.yml
   pull_request:
     branches:
@@ -14,6 +15,7 @@ on:
     paths:
       - research/btc_recursive_backtest.py
       - research/btc_recursive_backtest_fast.py
+      - research/btc_recursive_backtest_corrected.py
       - .github/workflows/btc_recursive_backtest.yml
   workflow_dispatch:
 
@@ -37,23 +39,23 @@ jobs:
         run: python -m pip install --disable-pip-version-check numpy==2.3.2
 
       - name: Verify syntax
-        run: python -m py_compile research/btc_recursive_backtest.py research/btc_recursive_backtest_fast.py
+        run: python -m py_compile research/btc_recursive_backtest.py research/btc_recursive_backtest_corrected.py
 
-      - name: Run five-year walk-forward backtest
+      - name: Run corrected five-year walk-forward backtest
         run: |
           mkdir -p results/thorough_backtest
-          python research/btc_recursive_backtest_fast.py | tee results/thorough_backtest/console-summary.json
+          python research/btc_recursive_backtest_corrected.py | tee results/thorough_backtest/console-summary.json
 
       - name: Package report
         run: |
-          cp research/btc_recursive_backtest.py research/btc_recursive_backtest_fast.py results/thorough_backtest/
+          cp research/btc_recursive_backtest.py research/btc_recursive_backtest_fast.py research/btc_recursive_backtest_corrected.py results/thorough_backtest/
           cd results
           zip -r btc-recursive-thorough-backtest.zip thorough_backtest
 
       - name: Upload thorough report
         uses: actions/upload-artifact@v4
         with:
-          name: btc-recursive-thorough-backtest
+          name: btc-recursive-thorough-backtest-corrected
           path: |
             results/thorough_backtest
             results/btc-recursive-thorough-backtest.zip
