@@ -1,0 +1,40 @@
+name: BTC live tick paper run
+
+on:
+  push:
+    branches:
+      - btc-tick-live-20260726
+    paths:
+      - research/btc_tick_live.py
+      - .github/workflows/btc_tick_live.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture-and-backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Capture public BTC ticks and run paper strategy
+        env:
+          CAPTURE_SECONDS: "90"
+          OUTPUT_DIR: results/live_tick
+        run: python research/btc_tick_live.py
+
+      - name: Upload raw ticks and result
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-live-tick-run
+          path: results/live_tick
+          if-no-files-found: error
+          retention-days: 7
